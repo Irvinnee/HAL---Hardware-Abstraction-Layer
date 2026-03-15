@@ -28,7 +28,15 @@ package HAL_GPIO is
    -- Toggle a pin state
    procedure GPIO_Toggle (Config : HAL_Platform.Pin_Config);
 
-   -- Initialize all GPIO ports
+   -- Switch pin to a peripheral alternate function (sets PFS PMR+PSEL)
+   -- PSEL values: see HAL_Platform.PSEL_* constants
+   procedure GPIO_Set_Alternate (Config : HAL_Platform.Pin_Config;
+                                  PSEL   : UInt8);
+
+   -- Enable IRQ input on a GPIO pin (sets PFS ISEL bit)
+   procedure GPIO_Set_IRQ (Config : HAL_Platform.Pin_Config);
+
+   -- Initialize all GPIO ports (unlock/lock PFS to known state)
    procedure GPIO_Initialize_All;
 
 end HAL_GPIO;

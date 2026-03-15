@@ -18,12 +18,7 @@ package HAL_Pin_Interrupt is
       Both_Edges,       -- Trigger on any change
       Low_Level);       -- Trigger while LOW
 
-   -- Arduino pin to IRQ mapping (Uno R4 Minima)
-   --   D2  -> IRQ6 (P301)
-   --   D3  -> IRQ5 (P105)
-   --   D8  -> IRQ4 (P304)
-   --   D18 (A4) -> IRQ3 (P407, also I2C SDA)
-   --   D19 (A5) -> IRQ2 (P408, also I2C SCL)
+   -- Arduino pin to IRQ mapping (Uno R4 Minima)\n   --   D2 = P104 -> IRQ1\n   --   D3 = P105 -> IRQ0\n   --   D8 = P304 -> IRQ9 (if available)\n   -- See RA4M1 User's Manual Table 19.6 for IRQn-DS pin assignments
 
    -- Pin interrupt callback
    type Pin_IRQ_Callback is access procedure;

@@ -1,16 +1,19 @@
 -- UART Implementation for Renesas RA4M1
--- Uses SCI (Serial Communication Interface) module 0
+-- UNO R4 Minima hardware UART: SCI2  (D0/RX = P301, D1/TX = P302)
+-- Note: USB-CDC serial uses the RA4M1 USB peripheral, not SCI.
 
 with System;
 with RA4M1_Registers;
 use RA4M1_Registers;
+with HAL_GPIO;
+with HAL_Platform;
+use HAL_Platform;
 
 package body HAL_UART is
 
    -- Calculate BRR value for given baud rate
-   -- Formula: BRR = (PCLK / (8 * 2^(2n-1) * baud)) - 1
-   -- For PCLK = 48 MHz, n=0 (CKS=00):
-   --   BRR = (48_000_000 / (32 * baud)) - 1
+   -- Formula: BRR = (PCLK / (32 * baud)) - 1  (CKS=00, n=0)
+   -- PCLK = 48 MHz
    function Baud_To_BRR (Baud : Baud_Rate) return UInt8 is
    begin
       case Baud is
@@ -20,14 +23,23 @@ package body HAL_UART is
       end case;
    end Baud_To_BRR;
 
-   -- Initialize UART via SCI0 registers
+   -- Initialize UART via SCI2 registers
    procedure UART_Init (Config : UART_Config := Default_Config) is
       SMR_Value : UInt8 := 0;
    begin
-      -- 1. Disable SCI0 transmit/receive
-      SCI0.SCR := 0;
+      -- 0. Enable SCI2 module clock (MSTPCRB bit 29)
+      MSTPCRB := MSTPCRB and (not 16#2000_0000#);
 
-      -- 2. Configure SMR (Serial Mode Register)
+      -- 1. Disable SCI2 transmit/receive
+      SCI2.SCR := 0;
+
+      -- 2. Configure RX/TX pins via PFS
+      --    D0/RX = P301: PSEL = 05h (SCI2 RXD2), PMR = 1
+      --    D1/TX = P302: PSEL = 05h (SCI2 TXD2), PMR = 1, PDR = 1
+      HAL_GPIO.GPIO_Set_Alternate (RX_Pin, PSEL_SCI1);   -- SCI2 uses PSEL=05h
+      HAL_GPIO.GPIO_Set_Alternate (TX_Pin, PSEL_SCI1);
+
+      -- 3. Configure SMR (Serial Mode Register)
       --    bit 7: CM=0 (async mode)
       --    bit 6: CHR (0=8bit, 1=9bit)
       --    bit 5: PE (parity enable)
@@ -51,28 +63,25 @@ package body HAL_UART is
          when Odd  => SMR_Value := SMR_Value or 16#30#;
       end case;
 
-      SCI0.SMR := SMR_Value;
+      SCI2.SMR := SMR_Value;
 
-      -- 3. Set baud rate
-      SCI0.BRR := Baud_To_BRR (Config.Baud);
+      -- 4. Set baud rate
+      SCI2.BRR := Baud_To_BRR (Config.Baud);
 
-      -- 4. Wait 1 bit period for clock to stabilize
+      -- 5. Wait 1 bit period for clock to stabilize
       -- (in real implementation: delay based on baud rate)
 
-      -- 5. Enable transmit and receive
-      --    SCR: TE=1 (bit 5), RE=1 (bit 4)
-      SCI0.SCR := SCR_TE or SCR_RE;
+      -- 6. Enable transmit and receive
+      SCI2.SCR := SCR_TE or SCR_RE;
    end UART_Init;
 
    -- Send character: wait for TDRE, then write to TDR
    procedure UART_Send_Char (Ch : Character) is
    begin
-      -- Wait until Transmit Data Register is empty
-      while (SCI0.SSR and SSR_TDRE) = 0 loop
+      while (SCI2.SSR and SSR_TDRE) = 0 loop
          null;
       end loop;
-      -- Write character
-      SCI0.TDR := UInt8 (Character'Pos (Ch));
+      SCI2.TDR := UInt8 (Character'Pos (Ch));
    end UART_Send_Char;
 
    -- Send string
@@ -94,23 +103,22 @@ package body HAL_UART is
    -- Receive character (blocking): wait for RDRF, then read RDR
    function UART_Receive_Char return Character is
    begin
-      -- Wait until Receive Data Register is full
-      while (SCI0.SSR and SSR_RDRF) = 0 loop
+      while (SCI2.SSR and SSR_RDRF) = 0 loop
          null;
       end loop;
-      return Character'Val (SCI0.RDR);
+      return Character'Val (SCI2.RDR);
    end UART_Receive_Char;
 
    -- Check if data available
    function UART_Data_Available return Boolean is
    begin
-      return (SCI0.SSR and SSR_RDRF) /= 0;
+      return (SCI2.SSR and SSR_RDRF) /= 0;
    end UART_Data_Available;
 
    -- Flush: wait until transmit complete
    procedure UART_Flush is
    begin
-      while (SCI0.SSR and SSR_TEND) = 0 loop
+      while (SCI2.SSR and SSR_TEND) = 0 loop
          null;
       end loop;
    end UART_Flush;

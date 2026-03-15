@@ -41,7 +41,8 @@ GPIO_Read(Config);        -- Odczyt wartości
 ```
 
 ### UART (Serial Communication)
-Komunikacja szeregowa USB na R4 Minima.
+Komunikacja szeregowa na D0/D1 przez SCI2 (P301/P302).
+Uwaga: USB-CDC serial używa wbudowanego USB, nie SCI.
 
 ```ada
 UART_Init;                -- Inicjalizacja (9600 baud)
@@ -195,34 +196,38 @@ gprbuild -P uno_r4_hal.gpr
 gprbuild -P uno_r4_hal.gpr
 ```
 
-2. **Konwertuj** do HEX (Arduino format):
+2. **Konwertuj** ELF do BIN (format Renesas bootloader):
 ```bash
-arm-none-eabi-objcopy -O ihex bin/main bin/main.hex
+arm-none-eabi-objcopy -O binary bin/main bin/main.bin
 ```
 
-3. **Wgraj** na Arduino:
+3. **Wgraj** na Arduino (podłącz USB, dobierz COM port):
 ```bash
-arduino-cli upload -b arduino:renesas_uno:uno_r4_minima \
-  -p COM3 --input-file bin/main.elf
+arduino-cli upload -b arduino:renesas_uno:minima \
+  -p COM3 --input-file bin/main.bin
 ```
+
+> **Uwaga:** Arduino R4 Minima używa bootloadera Renesas (dfu-util/bossac),
+> nie klasycznego avrdude. Alternatywnie można użyć `dfu-util` bezpośrednio.
 
 ## Przykład: Migający LED
 
 ```ada
--- Blink LED on D13
+-- Blink LED on D13 (P111)
 with HAL;
+use HAL;
 
 procedure Main is
-   LED_Config : constant HAL.GPIO.Pin_Config := 
-      (Port => 1, Pin => 2, Mode => Output);
+   LED : constant GPIO.Pin_Config := Platform.LED_Pin;
 begin
-   HAL.Initialize_All;
+   Initialize_All;
+   GPIO.GPIO_Init (LED);
    
    loop
-      HAL.GPIO.GPIO_Set(LED_Config);
-      delay 1.0;  -- 1 sekunda
+      GPIO.GPIO_Set (LED);
+      delay 1.0;
       
-      HAL.GPIO.GPIO_Clear(LED_Config);
+      GPIO.GPIO_Clear (LED);
       delay 1.0;
    end loop;
 end Main;
@@ -242,7 +247,7 @@ end Main;
 
 Patrz dokumentacja Renesas RA4M1:
 - GPIO: Port module (PCNTR1-4)
-- UART: Serial Communication Interface (SCI0)
+- UART: Serial Communication Interface (SCI2 on D0/D1)
 - ADC: A/D Converter (ADC0)
 - Timer/PWM: Asynchronous General Purpose Timer (AGT0/1)
 - SPI: SCI w trybie Clock Synchronous (SCI1/SCI9)

@@ -156,7 +156,19 @@ package RA4M1_Registers is
      (PFS_Base + Storage_Offset (Port_Num * 16#40# + Pin_Num * 16#04#));
 
    -- PFSWE (PFS Write Enable) - must write 1 before modifying PFS
+   -- PWPR is at address 0x4004_0D03 (8-bit register)
+   --   Bit 6 (PFSWE): PFS Write Enable  (0=protect, 1=allow PFS writes)
+   --   Bit 7 (B0WI):  PFSWE Write Inhibit (0=allow PFSWE change, 1=protect)
+   --
+   -- Unlock sequence: write 16#00# (clear B0WI), then write 16#40# (set PFSWE)
+   -- Lock sequence:   write 16#00# (clear PFSWE), then write 16#80# (set B0WI)
    PWPR_Address : constant Address := To_Address (16#4004_0D03#);
+
+   PWPR : aliased UInt8
+     with Import, Volatile, Address => To_Address (16#4004_0D03#);
+
+   PWPR_B0WI  : constant UInt8 := 16#80#;  -- bit 7
+   PWPR_PFSWE : constant UInt8 := 16#40#;  -- bit 6
 
    -- ===========================================================
    -- MSTP (Module Stop) - clock gating for peripherals

@@ -1,5 +1,6 @@
 -- UART (Serial) Driver for Arduino Uno R4
--- Provides serial communication at 9600 baud (default) and other speeds
+-- Hardware UART on D0(RX)/D1(TX) via SCI2 (P301=RXD2, P302=TXD2)
+-- Note: USB-CDC serial uses the RA4M1 USB peripheral, not SCI.
 
 with HAL_Platform;
 use HAL_Platform;
@@ -31,7 +32,7 @@ package HAL_UART is
    Default_Config : constant UART_Config := 
       (Baud => Baud_9600, Data => Bits_8, Stop => Stop_1, Parity => None);
 
-   -- Initialize UART (Serial 0 - connected to USB on R4 Minima)
+   -- Initialize UART (SCI2 on D0/D1 header pins)
    procedure UART_Init (Config : UART_Config := Default_Config);
 
    -- Send a single character

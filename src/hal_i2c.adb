@@ -2,6 +2,9 @@
 
 with RA4M1_Registers;
 use RA4M1_Registers;
+with HAL_GPIO;
+with HAL_Platform;
+use HAL_Platform;
 
 package body HAL_I2C is
 
@@ -77,6 +80,10 @@ package body HAL_I2C is
 
       -- 2. Disable IIC before configuration
       IIC.ICCR1 := 0;
+
+      -- 2b. Configure SDA/SCL pins via PFS (PSEL=07h = IIC)
+      HAL_GPIO.GPIO_Set_Alternate (SDA_Pin, PSEL_IIC);
+      HAL_GPIO.GPIO_Set_Alternate (SCL_Pin, PSEL_IIC);
 
       -- 3. Reset IIC
       IIC.ICCR1 := ICCR1_IICRST;

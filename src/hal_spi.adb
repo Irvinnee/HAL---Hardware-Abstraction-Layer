@@ -3,6 +3,8 @@
 with RA4M1_Registers;
 use RA4M1_Registers;
 with HAL_GPIO;
+with HAL_Platform;
+use HAL_Platform;
 
 package body HAL_SPI is
 
@@ -36,6 +38,20 @@ package body HAL_SPI is
 
       -- 2. Disable SCI
       SCI.SCR := 0;
+
+      -- 2b. Configure MOSI/MISO/SCK pins via PFS
+      --     SCI1 uses PSEL=04h (SCI0/1 group)
+      --     SCI9 uses PSEL=05h (SCI2/9 group)
+      case Config.Bus is
+         when SPI_0 =>
+            HAL_GPIO.GPIO_Set_Alternate (MOSI_Pin, PSEL_SCI0);
+            HAL_GPIO.GPIO_Set_Alternate (MISO_Pin, PSEL_SCI0);
+            HAL_GPIO.GPIO_Set_Alternate (SCK_Pin,  PSEL_SCI0);
+         when SPI_1 =>
+            HAL_GPIO.GPIO_Set_Alternate (MOSI_Pin, PSEL_SCI1);
+            HAL_GPIO.GPIO_Set_Alternate (MISO_Pin, PSEL_SCI1);
+            HAL_GPIO.GPIO_Set_Alternate (SCK_Pin,  PSEL_SCI1);
+      end case;
 
       -- 3. Set SMR for clock synchronous (SPI) mode
       --    CM=1 (bit 7), CKS bits for clock divider
